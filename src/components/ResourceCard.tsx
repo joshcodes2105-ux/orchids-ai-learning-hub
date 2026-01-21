@@ -25,6 +25,7 @@ interface ResourceCardProps {
   index: number;
   onBookmark: (resource: LearningResource) => void;
   onSummarize: (resource: LearningResource) => void;
+  onPlayVideo?: (resource: LearningResource) => void;
 }
 
 const sourceIcons = {
@@ -44,6 +45,7 @@ export function ResourceCard({
   index,
   onBookmark,
   onSummarize,
+  onPlayVideo,
 }: ResourceCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -63,16 +65,43 @@ export function ResourceCard({
     return views.toString();
   };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.4 }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="group"
-    >
-      <div className="glass rounded-2xl overflow-hidden card-hover">
+    const openExternalUrl = (url: string) => {
+    window.parent.postMessage({ type: "OPEN_EXTERNAL_URL", data: { url } }, "*");
+  };
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (resource.source === "youtube" && onPlayVideo) {
+      onPlayVideo(resource);
+    } else {
+      openExternalUrl(resource.url);
+    }
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, a")) {
+      return;
+    }
+    if (resource.source === "youtube" && onPlayVideo) {
+      onPlayVideo(resource);
+    } else {
+      openExternalUrl(resource.url);
+    }
+  };
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.1, duration: 0.4 }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className="group"
+      >
+        <div 
+          className="glass rounded-2xl overflow-hidden card-hover cursor-pointer"
+          onClick={handleCardClick}
+        >
         <div className="relative">
           <div className="aspect-video relative overflow-hidden">
             <img
@@ -90,14 +119,18 @@ export function ResourceCard({
                   exit={{ opacity: 0 }}
                   className="absolute inset-0 flex items-center justify-center bg-black/40"
                 >
-                  <a
-                    href={resource.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-4 rounded-full bg-indigo-500/90 hover:bg-indigo-500 transition-colors"
+                  <motion.button
+                    onClick={handlePlayClick}
+                    className="p-4 rounded-full bg-indigo-500/90 hover:bg-indigo-500 hover:scale-110 transition-all"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    <Play className="w-8 h-8 text-white fill-white" />
-                  </a>
+                    {resource.source === "youtube" ? (
+                      <Play className="w-8 h-8 text-white fill-white" />
+                    ) : (
+                      <ExternalLink className="w-8 h-8 text-white" />
+                    )}
+                  </motion.button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -249,17 +282,27 @@ export function ResourceCard({
               )}
             </motion.button>
             
-            <motion.a
-              href={resource.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <ExternalLink className="w-4 h-4" />
-              Open
-            </motion.a>
+            {resource.source === "youtube" && onPlayVideo ? (
+              <motion.button
+                onClick={handlePlayClick}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Play className="w-4 h-4 fill-white" />
+                Watch
+              </motion.button>
+            ) : (
+                <motion.button
+                  onClick={() => openExternalUrl(resource.url)}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Open
+                </motion.button>
+              )}
           </div>
         </div>
       </div>

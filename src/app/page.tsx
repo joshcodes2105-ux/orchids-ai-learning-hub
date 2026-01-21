@@ -11,6 +11,7 @@ import { LoadingState } from "@/components/LoadingState";
 import { Chatbot, ChatButton } from "@/components/Chatbot";
 import { FileUpload } from "@/components/FileUpload";
 import { FileResults } from "@/components/FileResults";
+import { VideoModal } from "@/components/VideoModal";
 import {
   LearningResource,
   SearchSession,
@@ -21,10 +22,11 @@ import {
 import {
   getStoredSession,
   addSearchSession,
-  toggleBookmark,
+  toggleBookmark as localToggleBookmark,
   clearHistory,
   isBookmarked,
 } from "@/lib/storage";
+import { useLearningMemory } from "@/hooks/useLearningMemory";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUp, Sparkles, Upload, Search } from "lucide-react";
 
@@ -50,6 +52,11 @@ export default function Home() {
   const [overallTopic, setOverallTopic] = useState("");
   const [sections, setSections] = useState<ExtractedSection[]>([]);
   const [sectionResources, setSectionResources] = useState<SectionResources[]>([]);
+
+  const [selectedVideo, setSelectedVideo] = useState<LearningResource | null>(null);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+
+  const { trackSearch, trackView, toggleBookmark: serverToggleBookmark } = useLearningMemory();
 
   useEffect(() => {
     const stored = getStoredSession();
@@ -90,15 +97,17 @@ export default function Home() {
       setSessions((prev) =>
         [newSession, ...prev.filter((s) => s.id !== newSession.id)].slice(0, 20)
       );
+
+      trackSearch(topic, resourcesWithBookmarks);
     } catch (error) {
       console.error("Search failed:", error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [trackSearch]);
 
   const handleBookmark = useCallback((resource: LearningResource) => {
-    const isNowBookmarked = toggleBookmark(resource);
+    const isNowBookmarked = localToggleBookmark(resource);
 
     setResources((prev) =>
       prev.map((r) =>
@@ -111,7 +120,9 @@ export default function Home() {
     } else {
       setBookmarks((prev) => prev.filter((b) => b.id !== resource.id));
     }
-  }, []);
+
+    serverToggleBookmark(resource);
+  }, [serverToggleBookmark]);
 
   const handleSummarize = useCallback(
     async (resource: LearningResource) => {
@@ -139,6 +150,17 @@ export default function Home() {
     },
     [currentTopic]
   );
+
+  const handlePlayVideo = useCallback((resource: LearningResource) => {
+    setSelectedVideo(resource);
+    setIsVideoModalOpen(true);
+    trackView(resource);
+  }, [trackView]);
+
+  const handleCloseVideoModal = useCallback(() => {
+    setIsVideoModalOpen(false);
+    setTimeout(() => setSelectedVideo(null), 200);
+  }, []);
 
   const handleSelectSession = useCallback((session: SearchSession) => {
     setCurrentTopic(session.topic);
@@ -272,6 +294,7 @@ export default function Home() {
                   sectionResources={sectionResources}
                   onBack={handleBackFromFileResults}
                   onBookmark={handleBookmark}
+                  onPlayVideo={handlePlayVideo}
                 />
               </motion.div>
             ) : !hasResults && !isLoading ? (
@@ -370,6 +393,7 @@ export default function Home() {
                     topic={currentTopic}
                     onBookmark={handleBookmark}
                     onSummarize={handleSummarize}
+                    onPlayVideo={handlePlayVideo}
                   />
                 )}
               </motion.div>
@@ -395,6 +419,12 @@ export default function Home() {
         topic={currentTopic || overallTopic}
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
+      />
+
+      <VideoModal
+        video={selectedVideo}
+        isOpen={isVideoModalOpen}
+        onClose={handleCloseVideoModal}
       />
 
       <AnimatePresence>

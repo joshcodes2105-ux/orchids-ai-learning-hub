@@ -10,6 +10,7 @@ interface ResultsGridProps {
   topic: string;
   onBookmark: (resource: LearningResource) => void;
   onSummarize: (resource: LearningResource) => void;
+  onPlayVideo?: (resource: LearningResource) => void;
 }
 
 export function ResultsGrid({
@@ -17,6 +18,7 @@ export function ResultsGrid({
   topic,
   onBookmark,
   onSummarize,
+  onPlayVideo,
 }: ResultsGridProps) {
   return (
     <div className="w-full max-w-7xl mx-auto">
@@ -59,6 +61,7 @@ export function ResultsGrid({
             index={index}
             onBookmark={onBookmark}
             onSummarize={onSummarize}
+            onPlayVideo={onPlayVideo}
           />
         ))}
       </div>

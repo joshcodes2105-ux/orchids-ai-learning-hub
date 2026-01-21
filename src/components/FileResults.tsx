@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FileText, Layers, ArrowLeft, Download } from "lucide-react";
+import { FileText, Layers, ArrowLeft } from "lucide-react";
 import { ExtractedSection, SectionResources, LearningResource } from "@/lib/types";
 import { SectionCard } from "./SectionCard";
 
@@ -12,6 +12,7 @@ interface FileResultsProps {
   sectionResources: SectionResources[];
   onBack: () => void;
   onBookmark?: (resource: LearningResource) => void;
+  onPlayVideo?: (resource: LearningResource) => void;
 }
 
 export function FileResults({
@@ -21,6 +22,7 @@ export function FileResults({
   sectionResources,
   onBack,
   onBookmark,
+  onPlayVideo,
 }: FileResultsProps) {
   const resourcesMap = new Map(
     sectionResources.map((sr) => [sr.sectionId, sr])
@@ -98,6 +100,7 @@ export function FileResults({
             resources={resourcesMap.get(section.id)}
             index={index}
             onBookmark={onBookmark}
+            onPlayVideo={onPlayVideo}
           />
         ))}
       </motion.div>

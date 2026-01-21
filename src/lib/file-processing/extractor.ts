@@ -37,7 +37,8 @@ function extractFromText(buffer: ArrayBuffer): string {
 
 async function extractFromPDF(buffer: ArrayBuffer): Promise<string> {
   try {
-    const pdfParse = (await import("pdf-parse")).default;
+    const pdfParseModule = await import("pdf-parse");
+    const pdfParse = pdfParseModule.default || pdfParseModule;
     const uint8Array = new Uint8Array(buffer);
     const nodeBuffer = Buffer.from(uint8Array);
     

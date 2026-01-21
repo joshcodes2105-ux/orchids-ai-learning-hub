@@ -4,14 +4,12 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
-  ChevronUp,
   Play,
   BookOpen,
   Lightbulb,
   Code,
   Calculator,
   FileText,
-  ExternalLink,
   Star,
   Clock,
   Eye,
@@ -26,6 +24,7 @@ interface SectionCardProps {
   resources?: SectionResources;
   index: number;
   onBookmark?: (resource: LearningResource) => void;
+  onPlayVideo?: (resource: LearningResource) => void;
 }
 
 const intentIcons = {
@@ -50,7 +49,7 @@ const depthBadges = {
   advanced: { label: "Advanced", color: "bg-red-500/20 text-red-400" },
 };
 
-export function SectionCard({ section, resources, index, onBookmark }: SectionCardProps) {
+export function SectionCard({ section, resources, index, onBookmark, onPlayVideo }: SectionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<"videos" | "theory">("videos");
 
@@ -193,6 +192,7 @@ export function SectionCard({ section, resources, index, onBookmark }: SectionCa
                         index={vidIndex}
                         formatViews={formatViews}
                         onBookmark={onBookmark}
+                        onPlayVideo={onPlayVideo}
                       />
                     ))}
                   </motion.div>
@@ -260,14 +260,31 @@ interface VideoCardProps {
   index: number;
   formatViews: (views?: number) => string;
   onBookmark?: (resource: LearningResource) => void;
+  onPlayVideo?: (resource: LearningResource) => void;
 }
 
-function VideoCard({ video, index, formatViews, onBookmark }: VideoCardProps) {
+function VideoCard({ video, index, formatViews, onBookmark, onPlayVideo }: VideoCardProps) {
   const [isBookmarked, setIsBookmarked] = useState(video.bookmarked || false);
+  const [isHovered, setIsHovered] = useState(false);
 
-  const handleBookmark = () => {
+  const handleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsBookmarked(!isBookmarked);
     onBookmark?.({ ...video, bookmarked: !isBookmarked });
+  };
+
+  const handlePlay = () => {
+    if (onPlayVideo) {
+      onPlayVideo(video);
+    }
+  };
+
+  const handleCardClick = () => {
+    if (video.source === "youtube" && onPlayVideo) {
+      onPlayVideo(video);
+    } else {
+      window.open(video.url, "_blank", "noopener,noreferrer");
+    }
   };
 
   return (
@@ -275,17 +292,40 @@ function VideoCard({ video, index, formatViews, onBookmark }: VideoCardProps) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="flex gap-4 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors group"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={handleCardClick}
+      className="flex gap-4 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors group cursor-pointer"
     >
       <div className="relative flex-shrink-0 w-32 aspect-video rounded-lg overflow-hidden">
         <img
           src={video.thumbnail}
           alt={video.title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <Play className="w-8 h-8 text-white fill-white" />
-        </div>
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 flex items-center justify-center"
+            >
+                <motion.div
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0.8 }}
+                  className="p-2 rounded-full bg-indigo-500/90"
+                >
+                  {video.source === "youtube" ? (
+                    <Play className="w-5 h-5 text-white fill-white" />
+                  ) : (
+                    <ExternalLink className="w-5 h-5 text-white" />
+                  )}
+                </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {video.duration && (
           <span className="absolute bottom-1 right-1 px-1.5 py-0.5 text-xs bg-black/80 text-white rounded">
             {video.duration}
@@ -341,15 +381,25 @@ function VideoCard({ video, index, formatViews, onBookmark }: VideoCardProps) {
               <Bookmark className="w-4 h-4" />
             )}
           </button>
-          <a
-            href={video.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-indigo-500/20 text-indigo-300 rounded-lg hover:bg-indigo-500/30 transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Watch
-          </a>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePlay();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-indigo-500/20 text-indigo-300 rounded-lg hover:bg-indigo-500/30 transition-colors"
+            >
+              {video.source === "youtube" ? (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-indigo-300" />
+                  Watch
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Open
+                </>
+              )}
+            </button>
         </div>
       </div>
     </motion.div>

@@ -46,9 +46,27 @@ function parseDuration(duration: string): number {
   return minutes;
 }
 
+const SECTION_VIDEO_IDS = [
+  "PkZNo7MFNFg",
+  "rfscVS0vtbw",
+  "8hly31xKli0",
+  "W6NZfCO5SIk",
+  "kqtD5dpn9C8",
+  "DHjqpvDnNGE",
+  "bMknfKXIFA8",
+  "Ke90Tje7VS0",
+  "eIrMbAQSU34",
+  "dQw4w9WgXcQ",
+  "jNQXAC9IVRw",
+  "ZZ5LpwO-An4",
+];
+
 function generateResourcesForSection(section: ExtractedSection): LearningResource[] {
   const { title, keywords, intent } = section;
   const searchTerm = title.length > 30 ? keywords.slice(0, 3).join(" ") : title;
+
+  const sectionHash = section.id.split("").reduce((a, b) => a + b.charCodeAt(0), 0);
+  const getVideoId = (offset: number) => SECTION_VIDEO_IDS[(sectionHash + offset) % SECTION_VIDEO_IDS.length];
 
   const depthLabel =
     intent.depth === "beginner"
@@ -70,8 +88,8 @@ function generateResourcesForSection(section: ExtractedSection): LearningResourc
       id: crypto.randomUUID(),
       title: `${searchTerm} - Complete ${depthLabel} Guide ${typeLabel}`.trim(),
       source: "youtube",
-      url: `https://www.youtube.com/watch?v=mock1`,
-      thumbnail: `https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=640&h=360&fit=crop`,
+      url: `https://www.youtube.com/watch?v=${getVideoId(0)}`,
+      thumbnail: `https://img.youtube.com/vi/${getVideoId(0)}/maxresdefault.jpg`,
       channel: "freeCodeCamp.org",
       duration: "25:30",
       views: 1800000,
@@ -95,8 +113,8 @@ function generateResourcesForSection(section: ExtractedSection): LearningResourc
       id: crypto.randomUUID(),
       title: `Understanding ${searchTerm} in Depth`,
       source: "youtube",
-      url: `https://www.youtube.com/watch?v=mock2`,
-      thumbnail: `https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=640&h=360&fit=crop`,
+      url: `https://www.youtube.com/watch?v=${getVideoId(1)}`,
+      thumbnail: `https://img.youtube.com/vi/${getVideoId(1)}/maxresdefault.jpg`,
       channel: "Fireship",
       duration: "12:45",
       views: 950000,
@@ -119,8 +137,8 @@ function generateResourcesForSection(section: ExtractedSection): LearningResourc
       id: crypto.randomUUID(),
       title: `${searchTerm} - Practical Examples & Use Cases`,
       source: "youtube",
-      url: `https://www.youtube.com/watch?v=mock3`,
-      thumbnail: `https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=640&h=360&fit=crop`,
+      url: `https://www.youtube.com/watch?v=${getVideoId(2)}`,
+      thumbnail: `https://img.youtube.com/vi/${getVideoId(2)}/maxresdefault.jpg`,
       channel: "Traversy Media",
       duration: "18:20",
       views: 720000,
@@ -134,8 +152,8 @@ function generateResourcesForSection(section: ExtractedSection): LearningResourc
       id: crypto.randomUUID(),
       title: `${searchTerm} Crash Course`,
       source: "youtube",
-      url: `https://www.youtube.com/watch?v=mock4`,
-      thumbnail: `https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=640&h=360&fit=crop`,
+      url: `https://www.youtube.com/watch?v=${getVideoId(3)}`,
+      thumbnail: `https://img.youtube.com/vi/${getVideoId(3)}/maxresdefault.jpg`,
       channel: "Web Dev Simplified",
       duration: "32:15",
       views: 580000,
@@ -149,9 +167,9 @@ function generateResourcesForSection(section: ExtractedSection): LearningResourc
       id: crypto.randomUUID(),
       title: `The Ultimate ${searchTerm} Reference`,
       source: "article",
-      url: `https://example.com/article/${encodeURIComponent(searchTerm)}`,
+      url: `https://developer.mozilla.org/en-US/docs/Learn`,
       thumbnail: `https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=640&h=360&fit=crop`,
-      author: "Tech Documentation",
+      author: "MDN Web Docs",
       views: 320000,
       publishedAt: "2024-10-05",
       description: `Comprehensive article on ${searchTerm}`,
