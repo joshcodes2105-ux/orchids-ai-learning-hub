@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   detectFileType,
   extractTextFromFile,
-  segmentIntoSections,
-  identifyOverallTopic,
 } from "@/lib/file-processing/extractor";
+import { generateCurriculumFromDocument } from "@/lib/intelligence/curriculum";
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sections = segmentIntoSections(extractedText);
+    const { sections, overallTopic } = await generateCurriculumFromDocument(extractedText, file.name);
 
     if (sections.length === 0) {
       return NextResponse.json(
@@ -44,8 +43,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const overallTopic = identifyOverallTopic(sections);
 
     const fileId = crypto.randomUUID();
 

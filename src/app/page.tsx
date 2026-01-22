@@ -10,7 +10,7 @@ import { SessionPanel } from "@/components/SessionPanel";
 import { LoadingState } from "@/components/LoadingState";
 import { Chatbot, ChatButton } from "@/components/Chatbot";
 import { FileUpload } from "@/components/FileUpload";
-import { FileResults } from "@/components/FileResults";
+import { SectionsDashboard } from "@/components/SectionsDashboard";
 import { VideoModal } from "@/components/VideoModal";
 import {
   LearningResource,
@@ -28,9 +28,9 @@ import {
 } from "@/lib/storage";
 import { useLearningMemory } from "@/hooks/useLearningMemory";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowUp, Sparkles, Upload, Search } from "lucide-react";
+import { ArrowUp, Sparkles, Upload, Search, BookOpen } from "lucide-react";
 
-type ViewMode = "search" | "upload" | "file-results";
+type ViewMode = "search" | "upload" | "curriculum";
 
 export default function Home() {
   const [resources, setResources] = useState<LearningResource[]>([]);
@@ -105,6 +105,54 @@ export default function Home() {
       setIsLoading(false);
     }
   }, [trackSearch]);
+
+  const handleGenerateCurriculum = useCallback(async (topic: string) => {
+    setIsLoading(true);
+    setCurrentTopic(topic);
+    setViewMode("curriculum");
+    setIsProcessingFile(true);
+    setProcessingStage("understanding");
+    setProcessingProgress(20);
+
+    try {
+      const response = await fetch("/api/curriculum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic }),
+      });
+
+      if (!response.ok) throw new Error("Failed to generate curriculum");
+
+      const data = await response.json();
+      setSections(data.sections);
+      setOverallTopic(data.overallTopic);
+      setProcessingProgress(60);
+      setProcessingStage("fetching");
+
+      const resourcesResponse = await fetch("/api/section-resources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sections: data.sections }),
+      });
+
+      if (!resourcesResponse.ok) throw new Error("Failed to fetch section resources");
+
+      const resourcesData = await resourcesResponse.json();
+      setSectionResources(resourcesData.sectionResources);
+      setProcessingProgress(100);
+      setProcessingStage("complete");
+
+      setTimeout(() => {
+        setIsProcessingFile(false);
+      }, 500);
+    } catch (error) {
+      console.error("Curriculum failed:", error);
+      setIsProcessingFile(false);
+      setViewMode("search");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const handleBookmark = useCallback((resource: LearningResource) => {
     const isNowBookmarked = localToggleBookmark(resource);
@@ -238,7 +286,7 @@ export default function Home() {
       setCurrentTopic(processData.overallTopic);
 
       await new Promise((r) => setTimeout(r, 500));
-      setViewMode("file-results");
+      setViewMode("curriculum");
       setIsProcessingFile(false);
     } catch (error) {
       console.error("File processing failed:", error);
@@ -257,12 +305,13 @@ export default function Home() {
     setProcessingError(undefined);
   }, []);
 
-  const handleBackFromFileResults = useCallback(() => {
-    setViewMode("upload");
+  const handleBackToStart = useCallback(() => {
+    setViewMode("search");
     setSections([]);
     setSectionResources([]);
     setFileName("");
     setOverallTopic("");
+    setResources([]);
   }, []);
 
   const scrollToTop = () => {
@@ -270,7 +319,7 @@ export default function Home() {
   };
 
   const hasResults = resources.length > 0;
-  const showFileResults = viewMode === "file-results" && sections.length > 0;
+  const showCurriculum = viewMode === "curriculum" && sections.length > 0 && !isProcessingFile;
 
   return (
     <div className="min-h-screen relative">
@@ -280,22 +329,41 @@ export default function Home() {
       <main className="relative z-10 pt-24 pb-20 px-6">
         <div className="max-w-7xl mx-auto">
           <AnimatePresence mode="wait">
-            {showFileResults ? (
+            {showCurriculum ? (
               <motion.div
-                key="file-results"
+                key="curriculum-view"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <FileResults
+                <SectionsDashboard
                   fileName={fileName}
                   overallTopic={overallTopic}
                   sections={sections}
                   sectionResources={sectionResources}
-                  onBack={handleBackFromFileResults}
+                  onBack={handleBackToStart}
                   onBookmark={handleBookmark}
                   onPlayVideo={handlePlayVideo}
                 />
+              </motion.div>
+            ) : isProcessingFile ? (
+              <motion.div
+                key="loading-file"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="min-h-[60vh] flex flex-col items-center justify-center"
+              >
+                <div className="w-full max-w-md">
+                  <FileUpload
+                    onFileSelect={() => {}}
+                    isProcessing={true}
+                    stage={processingStage}
+                    progress={processingProgress}
+                    error={processingError}
+                    onCancel={handleCancelUpload}
+                  />
+                </div>
               </motion.div>
             ) : !hasResults && !isLoading ? (
               <motion.div
@@ -344,6 +412,12 @@ export default function Home() {
                       className="w-full"
                     >
                       <SearchBar onSearch={handleSearch} isLoading={isLoading} />
+                      <div className="flex justify-center mt-6">
+                        <p className="text-gray-500 text-sm flex items-center gap-2">
+                          <BookOpen className="w-4 h-4" />
+                          Try searching for a broad topic like "Quantum Mechanics"
+                        </p>
+                      </div>
                     </motion.div>
                   ) : (
                     <motion.div
@@ -376,11 +450,20 @@ export default function Home() {
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
-                  <div className="flex items-center justify-center gap-2 mb-6">
-                    <Sparkles className="w-5 h-5 text-indigo-400" />
-                    <span className="text-sm text-gray-400">
-                      Searching for the best resources
-                    </span>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-indigo-400" />
+                      <span className="text-sm text-gray-400">
+                        Top results for {currentTopic}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleGenerateCurriculum(currentTopic)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 transition-all text-sm font-bold border border-indigo-500/20"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      Generate Adaptive Curriculum
+                    </button>
                   </div>
                   <SearchBar onSearch={handleSearch} isLoading={isLoading} />
                 </motion.div>
@@ -411,7 +494,7 @@ export default function Home() {
         onClearHistory={handleClearHistory}
       />
 
-      {(hasResults || showFileResults) && !isChatOpen && currentTopic && (
+      {(hasResults || showCurriculum) && !isChatOpen && currentTopic && (
         <ChatButton onClick={() => setIsChatOpen(true)} topic={currentTopic} />
       )}
 

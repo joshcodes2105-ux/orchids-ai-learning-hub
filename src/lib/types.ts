@@ -15,6 +15,9 @@ export interface LearningResource {
   relevanceScore: number;
   summary?: ResourceSummary;
   bookmarked?: boolean;
+  matchConfidence?: number;
+  matchExplanation?: string;
+  transcriptHighlights?: { text: string; timestamp: number }[];
 }
 
 export interface ResourceSummary {
@@ -85,6 +88,7 @@ export interface ExtractedSection {
   id: string;
   title: string;
   content: string;
+  learningObjective: string;
   keyConcepts: string[];
   keywords: string[];
   intent: SectionIntent;
